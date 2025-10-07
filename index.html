@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wordle</title>
+  <style>
+    body {
+      background-color: #121213;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .board {
+      display: grid;
+      grid-template-rows: repeat(6, 1fr);
+      gap: 5px;
+      margin-top: 60px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+    }
+
+    .tile {
+      width: 60px;
+      height: 60px;
+      border: 2px solid #3a3a3c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      text-transform: uppercase;
+      font-weight: bold;
+      background-color: #121213;
+      color: white;
+    }
+
+    .correct {
+      background-color: #538d4e;
+      border-color: #538d4e;
+    }
+
+    .present {
+      background-color: #b59f3b;
+      border-color: #b59f3b;
+    }
+
+    .absent {
+      background-color: #3a3a3c;
+      border-color: #3a3a3c;
+    }
+
+    .keyboard {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 30px;
+    }
+
+    .key-row {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 5px;
+    }
+
+    .key {
+      background-color: #818384;
+      border: none;
+      color: white;
+      margin: 3px;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: bold;
+    }
+
+    .key.correct { background-color: #538d4e; }
+    .key.present { background-color: #b59f3b; }
+    .key.absent { background-color: #3a3a3c; }
+
+    #popup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      visibility: hidden;
+    }
+
+    #popup-content {
+      background: white;
+      color: black;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    #popup a {
+      color: #007bff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    #tryAgainBtn {
+      background-color: #538d4e;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="board" id="board"></div>
+  <div class="keyboard" id="keyboard"></div>
+
+  <div id="popup">
+    <div id="popup-content">
+      <h2 id="popupTitle">Congratulations! 🎉</h2>
+      <p id="popupText">You guessed the word correctly!</p>
+      <p><a id="formLink" href="#" target="_blank">Click here to fill the form</a></p>
+      <button id="tryAgainBtn" style="display:none;">Try Again</button>
+    </div>
+  </div>
+
+  <script>
+    const targetWord = "INTERN";
+    const rows = 6;
+    const cols = 6;
+    let currentRow = 0;
+    let currentCol = 0;
+    const board = document.getElementById("board");
+
+    function createBoard() {
+      board.innerHTML = '';
+      for (let r = 0; r < rows; r++) {
+        let rowDiv = document.createElement("div");
+        rowDiv.classList.add("row");
+        for (let c = 0; c < cols; c++) {
+          let tile = document.createElement("div");
+          tile.classList.add("tile");
+          rowDiv.appendChild(tile);
+        }
+        board.appendChild(rowDiv);
+      }
+    }
+
+    createBoard();
+
+    const keys = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
+    const keyboard = document.getElementById("keyboard");
+
+    keys.forEach(row => {
+      const rowDiv = document.createElement("div");
+      rowDiv.classList.add("key-row");
+      [...row].forEach(letter => {
+        const key = document.createElement("button");
+        key.textContent = letter;
+        key.classList.add("key");
+        key.onclick = () => handleKey(letter);
+        rowDiv.appendChild(key);
+      });
+      keyboard.appendChild(rowDiv);
+    });
+
+    const controlRow = document.createElement("div");
+    controlRow.classList.add("key-row");
+    const enterKey = document.createElement("button");
+    enterKey.textContent = "Enter";
+    enterKey.classList.add("key");
+    enterKey.onclick = handleEnter;
+    const backspaceKey = document.createElement("button");
+    backspaceKey.textContent = "⌫";
+    backspaceKey.classList.add("key");
+    backspaceKey.onclick = handleBackspace;
+    controlRow.append(enterKey, backspaceKey);
+    keyboard.appendChild(controlRow);
+
+    function handleKey(letter) {
+      if (currentCol < cols && currentRow < rows) {
+        const rowDiv = board.children[currentRow];
+        const tile = rowDiv.children[currentCol];
+        tile.textContent = letter;
+        currentCol++;
+      }
+    }
+
+    function handleBackspace() {
+      if (currentCol > 0) {
+        currentCol--;
+        const rowDiv = board.children[currentRow];
+        const tile = rowDiv.children[currentCol];
+        tile.textContent = "";
+      }
+    }
+
+    function handleEnter() {
+      if (currentCol < cols) return;
+      const rowDiv = board.children[currentRow];
+      let guess = "";
+      for (let i = 0; i < cols; i++) {
+        guess += rowDiv.children[i].textContent;
+      }
+      checkWord(guess.toUpperCase(), rowDiv);
+    }
+
+    function checkWord(guess, rowDiv) {
+      const target = targetWord.split("");
+      for (let i = 0; i < cols; i++) {
+        const tile = rowDiv.children[i];
+        const letter = guess[i];
+        if (letter === target[i]) {
+          tile.classList.add("correct");
+        } else if (target.includes(letter)) {
+          tile.classList.add("present");
+        } else {
+          tile.classList.add("absent");
+        }
+      }
+
+      if (guess === targetWord) {
+        showPopup(true);
+      } else {
+        currentRow++;
+        currentCol = 0;
+        if (currentRow === rows) showPopup(false);
+      }
+    }
+
+    function showPopup(success) {
+      const popup = document.getElementById("popup");
+      const title = document.getElementById("popupTitle");
+      const text = document.getElementById("popupText");
+      const formLink = document.getElementById("formLink");
+      const tryAgainBtn = document.getElementById("tryAgainBtn");
+
+      popup.style.visibility = "visible";
+      if (success) {
+        title.textContent = "Congratulations! 🎉";
+        text.textContent = "You guessed the word correctly!";
+        formLink.style.display = "inline";
+        tryAgainBtn.style.display = "none";
+      } else {
+        title.textContent = "Game Over!";
+        text.textContent = "Better luck next time!";
+        formLink.style.display = "none";
+        tryAgainBtn.style.display = "inline";
+        tryAgainBtn.onclick = resetGame;
+      }
+    }
+
+    function resetGame() {
+      const popup = document.getElementById("popup");
+      popup.style.visibility = "hidden";
+      currentRow = 0;
+      currentCol = 0;
+      createBoard();
+    }
+
+    document.getElementById("formLink").href = "YOUR_FORM_LINK_HERE";
+  </script>
+</body>
+</html>
