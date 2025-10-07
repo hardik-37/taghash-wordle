@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wordle</title>
+  <title>Wordle - INTERN</title>
   <style>
     body {
       background-color: #121213;
@@ -21,7 +21,7 @@
       display: grid;
       grid-template-rows: repeat(6, 1fr);
       gap: 5px;
-      margin-top: 60px;
+      margin-top: 20px;
     }
 
     .row {
@@ -84,10 +84,6 @@
       font-weight: bold;
     }
 
-    .key.correct { background-color: #538d4e; }
-    .key.present { background-color: #b59f3b; }
-    .key.absent { background-color: #3a3a3c; }
-
     #popup {
       position: fixed;
       top: 0;
@@ -114,17 +110,6 @@
       text-decoration: none;
       font-weight: bold;
     }
-
-    #tryAgainBtn {
-      background-color: #538d4e;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      margin-top: 10px;
-    }
   </style>
 </head>
 <body>
@@ -133,10 +118,9 @@
 
   <div id="popup">
     <div id="popup-content">
-      <h2 id="popupTitle">Congratulations! 🎉</h2>
-      <p id="popupText">You guessed the word correctly!</p>
+      <h2>Congratulations! 🎉</h2>
+      <p>You guessed the word correctly!</p>
       <p><a id="formLink" href="#" target="_blank">Click here to fill the form</a></p>
-      <button id="tryAgainBtn" style="display:none;">Try Again</button>
     </div>
   </div>
 
@@ -148,22 +132,19 @@
     let currentCol = 0;
     const board = document.getElementById("board");
 
-    function createBoard() {
-      board.innerHTML = '';
-      for (let r = 0; r < rows; r++) {
-        let rowDiv = document.createElement("div");
-        rowDiv.classList.add("row");
-        for (let c = 0; c < cols; c++) {
-          let tile = document.createElement("div");
-          tile.classList.add("tile");
-          rowDiv.appendChild(tile);
-        }
-        board.appendChild(rowDiv);
+    // Create board
+    for (let r = 0; r < rows; r++) {
+      const rowDiv = document.createElement("div");
+      rowDiv.classList.add("row");
+      for (let c = 0; c < cols; c++) {
+        const tile = document.createElement("div");
+        tile.classList.add("tile");
+        rowDiv.appendChild(tile);
       }
+      board.appendChild(rowDiv);
     }
 
-    createBoard();
-
+    // Create on-screen keyboard
     const keys = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
     const keyboard = document.getElementById("keyboard");
 
@@ -192,6 +173,17 @@
     backspaceKey.onclick = handleBackspace;
     controlRow.append(enterKey, backspaceKey);
     keyboard.appendChild(controlRow);
+
+    // Keyboard typing support (for laptops)
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        handleEnter();
+      } else if (e.key === "Backspace") {
+        handleBackspace();
+      } else if (/^[a-zA-Z]$/.test(e.key)) {
+        handleKey(e.key.toUpperCase());
+      }
+    });
 
     function handleKey(letter) {
       if (currentCol < cols && currentRow < rows) {
@@ -223,58 +215,44 @@
 
     function checkWord(guess, rowDiv) {
       const target = targetWord.split("");
+      const guessLetters = guess.split("");
+      const letterCount = {};
+
+      target.forEach(l => letterCount[l] = (letterCount[l] || 0) + 1);
+
+      // First pass: check correct
       for (let i = 0; i < cols; i++) {
         const tile = rowDiv.children[i];
-        const letter = guess[i];
-        if (letter === target[i]) {
+        if (guessLetters[i] === target[i]) {
           tile.classList.add("correct");
-        } else if (target.includes(letter)) {
-          tile.classList.add("present");
-        } else {
-          tile.classList.add("absent");
+          letterCount[guessLetters[i]]--;
+        }
+      }
+
+      // Second pass: check present
+      for (let i = 0; i < cols; i++) {
+        const tile = rowDiv.children[i];
+        if (!tile.classList.contains("correct")) {
+          const letter = guessLetters[i];
+          if (target.includes(letter) && letterCount[letter] > 0) {
+            tile.classList.add("present");
+            letterCount[letter]--;
+          } else {
+            tile.classList.add("absent");
+          }
         }
       }
 
       if (guess === targetWord) {
-        showPopup(true);
+        document.getElementById("popup").style.visibility = "visible";
       } else {
         currentRow++;
         currentCol = 0;
-        if (currentRow === rows) showPopup(false);
+        if (currentRow === rows) alert("Game Over! The word was INTERN.");
       }
     }
 
-    function showPopup(success) {
-      const popup = document.getElementById("popup");
-      const title = document.getElementById("popupTitle");
-      const text = document.getElementById("popupText");
-      const formLink = document.getElementById("formLink");
-      const tryAgainBtn = document.getElementById("tryAgainBtn");
-
-      popup.style.visibility = "visible";
-      if (success) {
-        title.textContent = "Congratulations! 🎉";
-        text.textContent = "You guessed the word correctly!";
-        formLink.style.display = "inline";
-        tryAgainBtn.style.display = "none";
-      } else {
-        title.textContent = "Game Over!";
-        text.textContent = "Better luck next time!";
-        formLink.style.display = "none";
-        tryAgainBtn.style.display = "inline";
-        tryAgainBtn.onclick = resetGame;
-      }
-    }
-
-    function resetGame() {
-      const popup = document.getElementById("popup");
-      popup.style.visibility = "hidden";
-      currentRow = 0;
-      currentCol = 0;
-      createBoard();
-    }
-
-    document.getElementById("formLink").href = "YOUR_FORM_LINK_HERE";
+    document.getElementById("formLink").href = "https://docs.google.com/forms/d/e/1FAIpQLSfzUW0lIAfoSjTuCGXIacWlmmzNm5sIG5lhtBXcKnYy7RF5JQ/viewform?usp=header";
   </script>
 </body>
 </html>
