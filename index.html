@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,23 +6,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordle - INTERN</title>
   <style>
+    :root {
+      --bg: #121213;
+      --tile-border: #3a3a3c;
+      --correct: #538d4e;
+      --present: #b59f3b;
+      --absent: #3a3a3c;
+      --text: #ffffff;
+      --key-bg: #818384;
+      --key-text: #ffffff;
+    }
+
     body {
-      background-color: #121213;
-      color: white;
-      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
       height: 100vh;
-      margin: 0;
+      justify-content: center;
     }
 
-    .board {
+    #board {
       display: grid;
       grid-template-rows: repeat(6, 1fr);
       gap: 5px;
-      margin-top: 20px;
+      margin-bottom: 30px;
     }
 
     .row {
@@ -33,226 +45,268 @@
     .tile {
       width: 60px;
       height: 60px;
-      border: 2px solid #3a3a3c;
+      border: 2px solid var(--tile-border);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2em;
-      text-transform: uppercase;
+      font-size: 2rem;
       font-weight: bold;
-      background-color: #121213;
-      color: white;
+      text-transform: uppercase;
+      color: var(--text);
+      transition: background-color 0.3s, transform 0.3s;
     }
 
-    .correct {
-      background-color: #538d4e;
-      border-color: #538d4e;
-    }
+    .correct { background-color: var(--correct); border-color: var(--correct); }
+    .present { background-color: var(--present); border-color: var(--present); }
+    .absent { background-color: var(--absent); border-color: var(--absent); }
 
-    .present {
-      background-color: #b59f3b;
-      border-color: #b59f3b;
-    }
-
-    .absent {
-      background-color: #3a3a3c;
-      border-color: #3a3a3c;
-    }
-
-    .keyboard {
+    #keyboard {
       display: flex;
       flex-direction: column;
+      gap: 6px;
+      justify-content: center;
       align-items: center;
-      margin-top: 30px;
     }
 
     .key-row {
       display: flex;
-      justify-content: center;
-      margin-bottom: 5px;
+      gap: 6px;
     }
 
     .key {
-      background-color: #818384;
+      background-color: var(--key-bg);
+      color: var(--key-text);
       border: none;
-      color: white;
-      margin: 3px;
-      padding: 10px 15px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1em;
+      padding: 14px 10px;
+      border-radius: 4px;
       font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      text-transform: uppercase;
     }
 
-    #popup {
+    .key.wide { width: 70px; }
+
+    .key:active { opacity: 0.7; }
+
+    @media (max-width: 600px) {
+      .tile { width: 48px; height: 48px; font-size: 1.5rem; }
+    }
+
+    #message {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
+      top: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      display: none;
+    }
+
+    #modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
       visibility: hidden;
     }
 
-    #popup-content {
-      background: white;
-      color: black;
-      padding: 30px;
+    #modalContent {
+      background: #222;
+      padding: 20px 30px;
       border-radius: 10px;
       text-align: center;
+      color: white;
     }
 
-    #popup a {
-      color: #007bff;
+    #modal a, #tryAgainBtn {
+      display: inline-block;
+      margin-top: 15px;
+      background-color: var(--correct);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 6px;
       text-decoration: none;
       font-weight: bold;
+      cursor: pointer;
     }
+
+    #tryAgainBtn { background-color: var(--present); }
   </style>
 </head>
 <body>
-  <div class="board" id="board"></div>
-  <div class="keyboard" id="keyboard"></div>
+  <div id="board"></div>
+  <div id="keyboard"></div>
 
-  <div id="popup">
-    <div id="popup-content">
-      <h2>Congratulations! 🎉</h2>
-      <p>You guessed the word correctly!</p>
-      <p><a id="formLink" href="#" target="_blank">Click here to fill the form</a></p>
+  <div id="message"></div>
+
+  <div id="modal">
+    <div id="modalContent">
+      <h2 id="modalTitle">You did it!</h2>
+      <p id="modalText"></p>
+      <a id="googleFormLink" href="https://docs.google.com/forms/d/e/1FAIpQLSfzUW0lIAfoSjTuCGXIacWlmmzNm5sIG5lhtBXcKnYy7RF5JQ/viewform?usp=header" target="_blank">Open Google Form</a>
+      <button id="tryAgainBtn" style="display:none;">Try Again</button>
     </div>
   </div>
 
   <script>
-    const targetWord = "INTERN";
-    const rows = 6;
-    const cols = 6;
-    let currentRow = 0;
-    let currentCol = 0;
+    const WORD = "INTERN";
+    const ROWS = 6;
+    const COLS = WORD.length;
+
     const board = document.getElementById("board");
-
-    // Create board
-    for (let r = 0; r < rows; r++) {
-      const rowDiv = document.createElement("div");
-      rowDiv.classList.add("row");
-      for (let c = 0; c < cols; c++) {
-        const tile = document.createElement("div");
-        tile.classList.add("tile");
-        rowDiv.appendChild(tile);
-      }
-      board.appendChild(rowDiv);
-    }
-
-    // Create on-screen keyboard
-    const keys = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
     const keyboard = document.getElementById("keyboard");
+    const message = document.getElementById("message");
+    const modal = document.getElementById("modal");
+    const modalText = document.getElementById("modalText");
+    const modalTitle = document.getElementById("modalTitle");
+    const googleFormLink = document.getElementById("googleFormLink");
+    const tryAgainBtn = document.getElementById("tryAgainBtn");
 
-    keys.forEach(row => {
-      const rowDiv = document.createElement("div");
-      rowDiv.classList.add("key-row");
-      [...row].forEach(letter => {
-        const key = document.createElement("button");
-        key.textContent = letter;
-        key.classList.add("key");
-        key.onclick = () => handleKey(letter);
-        rowDiv.appendChild(key);
+    let currentRow = 0, currentCol = 0, finished = false;
+    let grid = [];
+
+    function createBoard() {
+      board.innerHTML = "";
+      grid = [];
+      for (let r = 0; r < ROWS; r++) {
+        const row = document.createElement("div");
+        row.className = "row";
+        let rowTiles = [];
+        for (let c = 0; c < COLS; c++) {
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          row.appendChild(tile);
+          rowTiles.push(tile);
+        }
+        board.appendChild(row);
+        grid.push(rowTiles);
+      }
+    }
+
+    const KEYS = [
+      ["q","w","e","r","t","y","u","i","o","p"],
+      ["a","s","d","f","g","h","j","k","l"],
+      ["Enter","z","x","c","v","b","n","m","Backspace"]
+    ];
+
+    function createKeyboard() {
+      keyboard.innerHTML = "";
+      KEYS.forEach(row => {
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "key-row";
+        row.forEach(k => {
+          const key = document.createElement("button");
+          key.className = "key";
+          if (k === "Enter" || k === "Backspace") key.classList.add("wide");
+          key.textContent = k === "Backspace" ? "⌫" : k.toUpperCase();
+          key.onclick = () => handleKey(k);
+          rowDiv.appendChild(key);
+        });
+        keyboard.appendChild(rowDiv);
       });
-      keyboard.appendChild(rowDiv);
-    });
+    }
 
-    const controlRow = document.createElement("div");
-    controlRow.classList.add("key-row");
-    const enterKey = document.createElement("button");
-    enterKey.textContent = "Enter";
-    enterKey.classList.add("key");
-    enterKey.onclick = handleEnter;
-    const backspaceKey = document.createElement("button");
-    backspaceKey.textContent = "⌫";
-    backspaceKey.classList.add("key");
-    backspaceKey.onclick = handleBackspace;
-    controlRow.append(enterKey, backspaceKey);
-    keyboard.appendChild(controlRow);
+    function handleKey(k) {
+      if (finished) return;
 
-    // Keyboard typing support (for laptops)
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        handleEnter();
-      } else if (e.key === "Backspace") {
-        handleBackspace();
-      } else if (/^[a-zA-Z]$/.test(e.key)) {
-        handleKey(e.key.toUpperCase());
-      }
-    });
-
-    function handleKey(letter) {
-      if (currentCol < cols && currentRow < rows) {
-        const rowDiv = board.children[currentRow];
-        const tile = rowDiv.children[currentCol];
-        tile.textContent = letter;
-        currentCol++;
+      if (k === "Backspace") {
+        if (currentCol > 0) {
+          currentCol--;
+          grid[currentRow][currentCol].textContent = "";
+        }
+      } else if (k === "Enter") {
+        submitGuess();
+      } else if (/^[a-zA-Z]$/.test(k)) {
+        if (currentCol < COLS) {
+          grid[currentRow][currentCol].textContent = k.toUpperCase();
+          currentCol++;
+        }
       }
     }
 
-    function handleBackspace() {
-      if (currentCol > 0) {
-        currentCol--;
-        const rowDiv = board.children[currentRow];
-        const tile = rowDiv.children[currentCol];
-        tile.textContent = "";
+    function submitGuess() {
+      const guess = grid[currentRow].map(t => t.textContent).join("");
+      if (guess.length !== COLS) {
+        showMessage("Not enough letters");
+        return;
       }
-    }
 
-    function handleEnter() {
-      if (currentCol < cols) return;
-      const rowDiv = board.children[currentRow];
-      let guess = "";
-      for (let i = 0; i < cols; i++) {
-        guess += rowDiv.children[i].textContent;
+      const result = Array(COLS).fill("absent");
+      const targetArr = WORD.split("");
+      const targetCount = {};
+      for (let ch of targetArr) targetCount[ch] = (targetCount[ch] || 0) + 1;
+
+      for (let i = 0; i < COLS; i++) {
+        if (guess[i] === WORD[i]) {
+          result[i] = "correct";
+          targetCount[guess[i]]--;
+        }
       }
-      checkWord(guess.toUpperCase(), rowDiv);
-    }
-
-    function checkWord(guess, rowDiv) {
-      const target = targetWord.split("");
-      const guessLetters = guess.split("");
-      const letterCount = {};
-
-      target.forEach(l => letterCount[l] = (letterCount[l] || 0) + 1);
-
-      // First pass: check correct
-      for (let i = 0; i < cols; i++) {
-        const tile = rowDiv.children[i];
-        if (guessLetters[i] === target[i]) {
-          tile.classList.add("correct");
-          letterCount[guessLetters[i]]--;
+      for (let i = 0; i < COLS; i++) {
+        if (result[i] === "correct") continue;
+        if (targetCount[guess[i]] > 0) {
+          result[i] = "present";
+          targetCount[guess[i]]--;
         }
       }
 
-      // Second pass: check present
-      for (let i = 0; i < cols; i++) {
-        const tile = rowDiv.children[i];
-        if (!tile.classList.contains("correct")) {
-          const letter = guessLetters[i];
-          if (target.includes(letter) && letterCount[letter] > 0) {
-            tile.classList.add("present");
-            letterCount[letter]--;
-          } else {
-            tile.classList.add("absent");
-          }
-        }
+      for (let i = 0; i < COLS; i++) {
+        grid[currentRow][i].classList.add(result[i]);
       }
 
-      if (guess === targetWord) {
-        document.getElementById("popup").style.visibility = "visible";
-      } else {
-        currentRow++;
-        currentCol = 0;
-        if (currentRow === rows) alert("Game Over! The word was INTERN.");
+      if (guess === WORD) {
+        finished = true;
+        openModal(`You guessed it in ${currentRow + 1} tries!`, true);
+        return;
+      }
+
+      currentRow++;
+      currentCol = 0;
+      if (currentRow >= ROWS) {
+        finished = true;
+        openModal(`The word was ${WORD}.`, false);
       }
     }
 
-    document.getElementById("formLink").href = "YOUR_FORM_LINK_HERE";
+    function showMessage(text) {
+      message.textContent = text;
+      message.style.display = "block";
+      setTimeout(() => (message.style.display = "none"), 1000);
+    }
+
+    function openModal(text, success) {
+      modalText.textContent = text;
+      modalTitle.textContent = success ? "You did it!" : "Try Again!";
+      googleFormLink.style.display = success ? "inline-block" : "none";
+      tryAgainBtn.style.display = success ? "none" : "inline-block";
+      modal.style.visibility = "visible";
+    }
+
+    tryAgainBtn.onclick = () => {
+      modal.style.visibility = "hidden";
+      resetGame();
+    };
+
+    function resetGame() {
+      currentRow = 0;
+      currentCol = 0;
+      finished = false;
+      createBoard();
+      createKeyboard();
+    }
+
+    document.addEventListener("keydown", e => {
+      if (finished) return;
+      if (e.key === "Enter") handleKey("Enter");
+      else if (e.key === "Backspace") handleKey("Backspace");
+      else if (/^[a-zA-Z]$/.test(e.key)) handleKey(e.key);
+    });
+
+    createBoard();
+    createKeyboard();
   </script>
 </body>
 </html>
