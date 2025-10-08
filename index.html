@@ -132,11 +132,20 @@
       font-weight: bold;
       cursor: pointer;
     }
+    
+    .logo img {
+      width: 30vw;
+      /* height: 100px; */
+      /* display: block; */
+      margin: 0 auto;
+      padding: 30px 0px;
+    }
 
     #tryAgainBtn { background-color: var(--present); }
   </style>
 </head>
 <body>
+  <div class="logo"><img src="Taghash.png" alt=""></div>
   <div id="board"></div>
   <div id="keyboard"></div>
 
@@ -259,7 +268,6 @@
 
       if (guess === WORD) {
         finished = true;
-        window.open("https://docs.google.com/forms/d/e/1FAIpQLSfzUW0lIAfoSjTuCGXIacWlmmzNm5sIG5lhtBXcKnYy7RF5JQ/viewform?usp=header", "_blank");
         openModal(`You guessed it in ${currentRow + 1} tries!`, true);
         return;
       }
